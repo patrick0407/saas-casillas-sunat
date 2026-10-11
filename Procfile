@@ -1,0 +1,1 @@
+web: gunicorn saas_casillas_sunat.wsgi --log-file -

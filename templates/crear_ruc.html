@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Nuevo RUC - Casilla SaaS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-6">
+    <div class="max-w-2xl mx-auto">
+        <!-- Encabezado / Navegación -->
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-slate-800">Registrar Nuevo RUC / Contribuyente</h1>
+            <a href="{% url 'lista_rucs' %}" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium transition">
+                ← Volver a la Lista
+            </a>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-3 rounded-lg text-sm bg-blue-100 text-blue-700 border border-blue-200">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Formulario de Registro -->
+        <div class="bg-white rounded-2xl shadow-md p-8 border border-slate-200">
+            <form method="POST" class="space-y-5">
+                {% csrf_token %}
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Razón Social o Nombre Completo</label>
+                    <input type="text" name="razon_social" required
+                           class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                           placeholder="Ej. Empresa Comercial S.A.C.">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Número de RUC</label>
+                        <input type="text" name="ruc" maxlength="11" minlength="11" required
+                               class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                               placeholder="10203040501">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">DNI Representante (Opcional)</label>
+                        <input type="text" name="dni_representante" maxlength="8"
+                               class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                               placeholder="12345678">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Usuario SOL</label>
+                        <input type="text" name="usuario_sol" required
+                               class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                               placeholder="Ej. MODDATOS">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Clave SOL</label>
+                        <input type="password" name="clave_sol" required
+                               class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                               placeholder="••••••••">
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-400 italic">
+                    * La Clave SOL se encriptará de forma segura mediante Fernet/AES-256 antes de guardarse en la base de datos.
+                </p>
+
+                <div class="pt-4 flex items-center justify-end space-x-3">
+                    <a href="{% url 'lista_rucs' %}" class="px-5 py-2.5 text-slate-600 hover:text-slate-800 font-medium text-sm">
+                        Cancelar
+                    </a>
+                    <button type="submit" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-md hover:shadow-lg transition duration-200">
+                        Guardar y Encriptar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

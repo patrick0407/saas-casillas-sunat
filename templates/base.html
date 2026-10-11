@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SaaS Casillas SUNAT{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-800 flex h-screen overflow-hidden">
+
+    <!-- Sidebar / Menú Lateral -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 shadow-lg">
+        <div>
+            <div class="flex items-center space-x-3 mb-8 px-2">
+                <i class="fa-solid fa-building-shield text-blue-500 text-2xl"></i>
+                <span class="font-bold text-xl tracking-wide">SUNAT Bot</span>
+            </div>
+            
+            <nav class="space-y-2">
+               <a href="{% url 'dashboard' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-300 hover:text-white">
+                   <i class="fa-solid fa-chart-line text-lg w-5"></i>
+                   <span>Dashboard</span>
+               </a>
+               <a href="{% url 'lista_rucs' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-300 hover:text-white">
+                   <i class="fa-solid fa-address-book text-lg w-5"></i>
+                   <span>Mis RUCs</span>
+               </a>
+               <a href="{% url 'bandeja_casilla' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition text-slate-300 hover:text-white">
+                   <i class="fa-solid fa-inbox text-lg w-5"></i>
+                   <span>Bandeja de Casilla</span>
+               </a>
+            </nav>
+        </div>
+
+        <div class="p-4 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-400">
+            <span class="font-medium text-slate-300">{{ request.user.username }}</span>
+    
+            <!-- Enlace corregido para cerrar sesión -->
+            <a href="{% url 'logout' %}" class="text-red-400 hover:text-red-300 transition font-medium flex items-center gap-1">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar Sesión
+            </a>
+        </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 overflow-y-auto p-8">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+</body>
+</html>
