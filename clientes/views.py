@@ -74,14 +74,14 @@ def crear_ruc_view(request):
         
         estudio = getattr(request.user, 'perfil_estudio', None)
         if estudio:
-            ClienteRuc.objects.create(
+            nuevo_ruc = ClienteRuc.objects.create(
                 estudio=estudio,
                 ruc=ruc,
                 razon_social=razon_social,
                 usuario_sol=usuario_sol,
                 clave_sol=clave_sol
             )
-            messages.success(request, "Cliente RUC registrado correctamente.")
+            messages.success(request, f"RUC {ruc} registrado. El bot iniciará la descarga automática del historial SIRE en PDF.")
         else:
             messages.error(request, "No se encontró un perfil de estudio asociado.")
         return redirect('dashboard')
@@ -89,7 +89,36 @@ def crear_ruc_view(request):
     return render(request, 'crear_ruc.html')
 
 
-# --- VISTA DE CONFIGURACIÓN DEL ESTUDIO ---
+@login_required
+def lista_comprobantes(request):
+    try:
+        rucs_usuario = ClienteRuc.objects.filter(estudio__usuario=request.user).values_list('ruc', flat=True)
+        comprobantes = Comprobante.objects.filter(ruc_propietario__in=rucs_usuario).order_by('-fecha_emision')
+    except Exception:
+        comprobantes = Comprobante.objects.all().order_by('-fecha_emision')
+
+    # Filtros
+    origen_filter = request.GET.get('origen')
+    ruc_filter = request.GET.get('ruc')
+    tipo_filter = request.GET.get('tipo')
+    serie_filter = request.GET.get('serie')
+    numero_filter = request.GET.get('numero')
+
+    if origen_filter:
+        comprobantes = comprobantes.filter(origen=origen_filter)
+    if ruc_filter:
+        comprobantes = comprobantes.filter(ruc_contraparte__icontains=ruc_filter)
+    if tipo_filter:
+        comprobantes = comprobantes.filter(tipo_comprobante=tipo_filter)
+    if serie_filter:
+        comprobantes = comprobantes.filter(serie__icontains=serie_filter)
+    if numero_filter:
+        comprobantes = comprobantes.filter(numero__icontains=numero_filter)
+
+    context = {
+        'comprobantes': comprobantes,
+    }
+    return render(request, 'comprobantes.html', context)
 
 @login_required
 def configuracion_estudio_view(request):
@@ -115,31 +144,3 @@ def cuenta_suspendida_view(request):
 
 # --- VISTA DE COMPROBANTES Y FACTURAS (SIRE) ---
 
-@login_required
-def lista_comprobantes(request):
-    # Obtenemos los RUCs asociados al cliente/estudio logueado
-    try:
-        rucs_usuario = ClienteRuc.objects.filter(estudio__usuario=request.user).values_list('ruc', flat=True)
-        comprobantes = Comprobante.objects.filter(ruc_propietario__in=rucs_usuario).order_by('-fecha_emision')
-    except Exception:
-        comprobantes = Comprobante.objects.all().order_by('-fecha_emision')
-
-    # Filtros opcionales
-    ruc_filter = request.GET.get('ruc')
-    tipo_filter = request.GET.get('tipo')
-    serie_filter = request.GET.get('serie')
-    numero_filter = request.GET.get('numero')
-
-    if ruc_filter:
-        comprobantes = comprobantes.filter(ruc_contraparte__icontains=ruc_filter)
-    if tipo_filter:
-        comprobantes = comprobantes.filter(tipo_comprobante=tipo_filter)
-    if serie_filter:
-        comprobantes = comprobantes.filter(serie__icontains=serie_filter)
-    if numero_filter:
-        comprobantes = comprobantes.filter(numero__icontains=numero_filter)
-
-    context = {
-        'comprobantes': comprobantes,
-    }
-    return render(request, 'comprobantes.html', context)

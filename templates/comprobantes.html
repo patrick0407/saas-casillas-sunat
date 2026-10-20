@@ -1,52 +1,77 @@
 {% extends 'base.html' %}
 
-{% block title %}Comprobantes y Facturas | SaaS SUNAT{% endblock %}
+{% block title %}Consulta de Comprobantes de Pago | SaaS SUNAT{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-slate-800">Comprobantes y Facturas (SIRE)</h1>
+        <h1 class="text-2xl font-bold text-slate-800">Consulta de Comprobantes de Pago (SIRE)</h1>
     </div>
 
-    <!-- Filtros de búsqueda -->
+    <!-- Formulario de Búsqueda estilo SUNAT -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">RUC Emisor / Receptor</label>
-                <input type="text" name="ruc" class="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="20123456789" value="{{ request.GET.ruc }}">
+        <form method="GET" class="space-y-4">
+            <!-- Filtro Origen: Emitido vs Recibido -->
+            <div class="flex items-center space-x-6 border-b border-slate-100 pb-3">
+                <span class="text-sm font-semibold text-slate-700">Filtro de comprobante:</span>
+                <label class="inline-flex items-center cursor-pointer text-sm font-medium text-slate-700">
+                    <input type="radio" name="origen" value="EMITIDO" {% if request.GET.origen == 'EMITIDO' %}checked{% endif %} class="text-blue-600 focus:ring-blue-500 h-4 w-4">
+                    <span class="ml-2">Emitido</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer text-sm font-medium text-slate-700">
+                    <input type="radio" name="origen" value="RECIBIDO" {% if request.GET.origen == 'RECIBIDO' or not request.GET.origen %}checked{% endif %} class="text-blue-600 focus:ring-blue-500 h-4 w-4">
+                    <span class="ml-2">Recibido</span>
+                </label>
             </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo Documento</label>
-                <select name="tipo" class="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="">Todos</option>
-                    <option value="01">Factura</option>
-                    <option value="03">Boleta de Venta</option>
-                    <option value="07">Nota de Crédito</option>
-                </select>
+
+            <!-- Campos RUC, Tipo, Serie y Número -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">RUC Emisor / Contraparte (*)</label>
+                    <input type="text" name="ruc" class="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ingrese RUC" value="{{ request.GET.ruc }}">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de comprobante (*)</label>
+                    <select name="tipo" class="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">Todos</option>
+                        <option value="01" {% if request.GET.tipo == '01' %}selected{% endif %}>Factura</option>
+                        <option value="03" {% if request.GET.tipo == '03' %}selected{% endif %}>Boleta de Venta</option>
+                        <option value="07" {% if request.GET.tipo == '07' %}selected{% endif %}>Nota de Crédito</option>
+                        <option value="08" {% if request.GET.tipo == '08' %}selected{% endif %}>Nota de Débito</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Serie y número del comprobante (*)</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" name="serie" class="w-1/3 text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="F001" value="{{ request.GET.serie }}">
+                        <span class="text-slate-400 font-bold">-</span>
+                        <input type="text" name="numero" class="w-2/3 text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="000001" value="{{ request.GET.numero }}">
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Serie</label>
-                <input type="text" name="serie" class="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="F001" value="{{ request.GET.serie }}">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Número</label>
-                <input type="text" name="numero" class="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0000123" value="{{ request.GET.numero }}">
-            </div>
-            <div class="flex items-end">
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition shadow-sm">
-                    <i class="fa-solid fa-magnifying-glass mr-2"></i> Buscar
+
+            <!-- Botones -->
+            <div class="flex justify-end space-x-3 pt-2">
+                <a href="{% url 'lista_comprobantes' %}" class="px-5 py-2.5 border border-slate-300 text-slate-600 hover:bg-slate-50 font-medium rounded-lg text-sm transition">
+                    Limpiar
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition shadow-sm flex items-center">
+                    <i class="fa-solid fa-magnifying-glass mr-2"></i> Consultar
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- Tabla de resultados -->
+    <!-- Tabla de Comprobantes -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                         <th class="p-4">Fecha</th>
+                        <th class="p-4">Origen</th>
                         <th class="p-4">Tipo</th>
                         <th class="p-4">Serie-Número</th>
                         <th class="p-4">RUC Contraparte</th>
@@ -58,6 +83,13 @@
                     {% for comp in comprobantes %}
                     <tr class="hover:bg-slate-50/80 transition">
                         <td class="p-4 text-slate-600">{{ comp.fecha_emision }}</td>
+                        <td class="p-4">
+                            {% if comp.origen == 'EMITIDO' %}
+                                <span class="px-2.5 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-full">Emitido</span>
+                            {% else %}
+                                <span class="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full">Recibido</span>
+                            {% endif %}
+                        </td>
                         <td class="p-4 font-medium text-slate-800">{{ comp.get_tipo_comprobante_display }}</td>
                         <td class="p-4 font-bold text-slate-900">{{ comp.serie }}-{{ comp.numero }}</td>
                         <td class="p-4 text-slate-600">{{ comp.ruc_contraparte }}</td>
@@ -80,7 +112,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="p-8 text-center text-slate-400">
+                        <td colspan="7" class="p-8 text-center text-slate-400">
                             No se encontraron comprobantes o facturas registradas.
                         </td>
                     </tr>
