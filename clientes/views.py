@@ -11,7 +11,6 @@ from automatizacion.bot_sunat import extraer_historial_sire
 
 # --- CREAR Y GESTIONAR RUCS ---
 
-
 @login_required
 def crear_ruc_view(request):
     if request.method == 'POST':
@@ -63,9 +62,8 @@ def crear_ruc_view(request):
             messages.error(request, f"Error al procesar el formulario: {str(e)}")
             return render(request, 'crear_ruc.html')
 
-    # Si es método GET (abrir la página por primera vez)
     return render(request, 'crear_ruc.html')
-    
+
 
 # --- VISTAS DE AUTENTICACIÓN ---
 
@@ -124,45 +122,51 @@ def lista_rucs_view(request):
     return render(request, 'lista_rucs.html', {'rucs': rucs})
 
 
-# --- VISTA DE COMPROBANTES Y FACTURAS (SIRE) ---
+# --- VISTA DE COMPROBANTES Y FACTURAS (SIRE / RCE) ---
 
 @login_required
 def lista_comprobantes(request):
     comprobantes = Comprobante.objects.all().order_by('-fecha_emision')
 
-    origen_filter = request.GET.get('origen')
-    ruc_filter = request.GET.get('ruc', '').strip()
+    # Filtros recibidos desde el formulario GET en comprobantes.html
+    origen_filter = request.GET.get('origen', '').strip()
+    anio_filter = request.GET.get('anio', '').strip()
     mes_filter = request.GET.get('mes', '').strip()
+    ruc_filter = request.GET.get('ruc', '').strip()
 
     if origen_filter:
         comprobantes = comprobantes.filter(origen=origen_filter)
+
+    if anio_filter:
+        comprobantes = comprobantes.filter(fecha_emision__year=anio_filter)
+
+    if mes_filter:
+        comprobantes = comprobantes.filter(fecha_emision__month=mes_filter)
 
     if ruc_filter:
         comprobantes = comprobantes.filter(
             Q(ruc_propietario__icontains=ruc_filter) | Q(ruc_contraparte__icontains=ruc_filter)
         )
 
-    if mes_filter:
-        comprobantes = comprobantes.filter(fecha_emision__month=mes_filter)
-
     context = {
         'comprobantes': comprobantes,
     }
     return render(request, 'comprobantes.html', context)
 
+
 @login_required
 def sincronizar_manual_sunat(request):
-    # Obtener el RUC enviado por el usuario o tomar el primero registrado
-    ruc_numero = request.GET.get('ruc') or request.POST.get('ruc')
+    # Buscar el RUC pasado por GET o seleccionar el primero vinculado al estudio
+    ruc_numero = request.GET.get('ruc', '').strip()
     
     if ruc_numero:
         cliente = ClienteRuc.objects.filter(ruc=ruc_numero).first()
     else:
-        cliente = ClienteRuc.objects.filter(usuario=request.user).first()
+        estudio = getattr(request.user, 'perfil_estudio', None)
+        cliente = ClienteRuc.objects.filter(estudio=estudio).first() if estudio else ClienteRuc.objects.first()
 
     if cliente:
         try:
-            # Ejecuta el bot de Selenium manualmente al presionar el botón
             extraer_historial_sire(cliente.id)
             messages.success(request, f"¡Sincronización completada con éxito para el RUC {cliente.ruc}!")
         except Exception as e:
@@ -171,6 +175,9 @@ def sincronizar_manual_sunat(request):
         messages.error(request, "No se encontró ningún RUC asociado para sincronizar.")
 
     return redirect('lista_comprobantes')
+
+
+# --- CONFIGURACIÓN DE ESTUDIO Y CUENTA ---
 
 @login_required
 def configuracion_estudio_view(request):
