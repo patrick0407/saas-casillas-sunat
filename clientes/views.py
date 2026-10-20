@@ -1,10 +1,51 @@
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import ClienteRuc, PerfilEstudio, Comprobante
 from .forms import PerfilEstudioForm
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .models import ClienteRuc
+from automatizacion.bot_sunat import extraer_historial_sire
+import threading
+
+def crear_ruc_view(request):
+    if request.method == 'POST':
+        ruc_ingresado = request.POST.get('ruc', '').strip()
+        razon_social = request.POST.get('razon_social', '').strip()
+        usuario_sol = request.POST.get('usuario_sol', '').strip()
+        clave_sol = request.POST.get('clave_sol', '').strip()
+
+        # 1. Evitar duplicados para el mismo usuario / perfil
+        cliente, creado = ClienteRuc.objects.get_or_create(
+            ruc=ruc_ingresado,
+            defaults={
+                'razon_social': razon_social,
+                'usuario_sol': usuario_sol,
+                'clave_sol': clave_sol,
+            }
+        )
+
+        if not creado:
+            # Si ya existía, actualizamos credenciales por si las cambió
+            cliente.razon_social = razon_social
+            cliente.usuario_sol = usuario_sol
+            cliente.clave_sol = clave_sol
+            cliente.save()
+            messages.info(request, f"El RUC {ruc_ingresado} ya existía. Se actualizaron sus datos correctamente.")
+        else:
+            messages.success(request, f"RUC {ruc_ingresado} registrado con éxito.")
+
+        # 2. Ejecutar el bot de SUNAT automáticamente en segundo plano (hilo independiente)
+        # Esto evita que la página web se quede cargando infinitamente mientras Selenium trabaja
+        hilo_bot = threading.Thread(target=extraer_historial_sire, args=(cliente.id,))
+        hilo_bot.daemon = True
+        hilo_bot.start()
+
+        return redirect('mis_rucs') # O la vista donde listas los RUCs
+
+    return render(request, 'clientes/crear_ruc.html')
 
 # --- VISTAS DE AUTENTICACIÓN ---
 
@@ -64,29 +105,6 @@ def lista_rucs_view(request):
     rucs = ClienteRuc.objects.filter(estudio=estudio) if estudio else []
     return render(request, 'lista_rucs.html', {'rucs': rucs})
 
-@login_required
-def crear_ruc_view(request):
-    if request.method == 'POST':
-        ruc = request.POST.get('ruc')
-        razon_social = request.POST.get('razon_social')
-        usuario_sol = request.POST.get('usuario_sol')
-        clave_sol = request.POST.get('clave_sol')
-        
-        estudio = getattr(request.user, 'perfil_estudio', None)
-        if estudio:
-            nuevo_ruc = ClienteRuc.objects.create(
-                estudio=estudio,
-                ruc=ruc,
-                razon_social=razon_social,
-                usuario_sol=usuario_sol,
-                clave_sol=clave_sol
-            )
-            messages.success(request, f"RUC {ruc} registrado. El bot iniciará la descarga automática del historial SIRE en PDF.")
-        else:
-            messages.error(request, "No se encontró un perfil de estudio asociado.")
-        return redirect('dashboard')
-
-    return render(request, 'crear_ruc.html')
 
 
 @login_required
