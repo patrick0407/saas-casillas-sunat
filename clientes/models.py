@@ -62,3 +62,35 @@ class ClienteRuc(models.Model):
 
     def __str__(self):
         return f"{self.ruc} - {self.razon_social}"
+
+class Comprobante(models.Model):
+    TIPO_CHOICES = [
+        ('01', 'Factura'),
+        ('03', 'Boleta de Venta'),
+        ('07', 'Nota de Crédito'),
+        ('08', 'Nota de Débito'),
+    ]
+    
+    ORIGEN_CHOICES = [
+        ('RECIBIDO', 'Recibido (Compras / RCE)'),
+        ('EMITIDO', 'Emitido (Ventas / RVE)'),
+    ]
+
+    ruc_propietario = models.CharField(max_length=11)  # RUC de tu cliente
+    ruc_contraparte = models.CharField(max_length=11)  # RUC del emisor/receptor
+    razon_social_contraparte = models.CharField(max_length=255, blank=True, null=True)
+    tipo_comprobante = models.CharField(max_length=2, choices=TIPO_CHOICES, default='01')
+    serie = models.CharField(max_length=10)
+    numero = models.CharField(max_length=20)
+    fecha_emision = models.DateField()
+    monto_total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    origen = models.CharField(max_length=10, choices=ORIGEN_CHOICES, default='RECIBIDO')
+    
+    # Archivos PDF y XML extraídos de SUNAT
+    archivo_pdf = models.FileField(upload_to='comprobantes/pdf/', blank=True, null=True)
+    archivo_xml = models.FileField(upload_to='comprobantes/xml/', blank=True, null=True)
+    
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.get_tipo_comprobante_display()} {self.serie}-{self.numero} ({self.ruc_propietario})"

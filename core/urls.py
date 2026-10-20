@@ -22,6 +22,7 @@ from clientes.views import dashboard_view, lista_rucs_view, crear_ruc_view, logi
 from automatizacion.views import bandeja_casilla_view, marcar_leido_view
 from clientes.views import configuracion_estudio_view  
 from clientes.views import cuenta_suspendida_view
+from clientes.views import lista_comprobantes
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -34,6 +35,7 @@ urlpatterns = [
     path('casilla/marcar-leido/<int:notificacion_id>/', marcar_leido_view, name='marcar_leido'),
     path('configuracion/', configuracion_estudio_view, name='configuracion_estudio'),
     path('suspendido/', cuenta_suspendida_view, name='cuenta_suspendida'),
+    path('comprobantes/', lista_comprobantes, name='lista_comprobantes'),
 ]
 
 if settings.DEBUG:
