@@ -126,23 +126,27 @@ def lista_rucs_view(request):
 
 @login_required
 def lista_comprobantes(request):
+    # Traer todos los comprobantes ordenados por fecha
     comprobantes = Comprobante.objects.all().order_by('-fecha_emision')
 
-    # Filtros recibidos desde el formulario GET en comprobantes.html
     origen_filter = request.GET.get('origen', '').strip()
     anio_filter = request.GET.get('anio', '').strip()
     mes_filter = request.GET.get('mes', '').strip()
     ruc_filter = request.GET.get('ruc', '').strip()
 
+    # Filtrar por Origen solo si el usuario seleccionó uno específico
     if origen_filter:
         comprobantes = comprobantes.filter(origen=origen_filter)
 
+    # Filtrar por Año si viene en los parámetros
     if anio_filter:
         comprobantes = comprobantes.filter(fecha_emision__year=anio_filter)
 
+    # Filtrar por Mes solo si especifica un mes
     if mes_filter:
         comprobantes = comprobantes.filter(fecha_emision__month=mes_filter)
 
+    # Solo filtrar por RUC si el usuario escribió algo en el campo RUC
     if ruc_filter:
         comprobantes = comprobantes.filter(
             Q(ruc_propietario__icontains=ruc_filter) | Q(ruc_contraparte__icontains=ruc_filter)
@@ -153,26 +157,28 @@ def lista_comprobantes(request):
     }
     return render(request, 'comprobantes.html', context)
 
-
 @login_required
 def sincronizar_manual_sunat(request):
-    # Buscar el RUC pasado por GET o seleccionar el primero vinculado al estudio
+    # Intentar obtener el RUC desde la URL, de lo contrario buscar el primer RUC del usuario o del sistema
     ruc_numero = request.GET.get('ruc', '').strip()
     
     if ruc_numero:
         cliente = ClienteRuc.objects.filter(ruc=ruc_numero).first()
     else:
         estudio = getattr(request.user, 'perfil_estudio', None)
-        cliente = ClienteRuc.objects.filter(estudio=estudio).first() if estudio else ClienteRuc.objects.first()
+        if estudio:
+            cliente = ClienteRuc.objects.filter(estudio=estudio).first()
+        else:
+            cliente = ClienteRuc.objects.first()
 
     if cliente:
         try:
             extraer_historial_sire(cliente.id)
-            messages.success(request, f"¡Sincronización completada con éxito para el RUC {cliente.ruc}!")
+            messages.success(request, f"¡Sincronización de SUNAT iniciada con éxito para el RUC {cliente.ruc}!")
         except Exception as e:
-            messages.error(request, f"Ocurrió un error durante la sincronización: {str(e)}")
+            messages.error(request, f"Error durante la sincronización: {str(e)}")
     else:
-        messages.error(request, "No se encontró ningún RUC asociado para sincronizar.")
+        messages.error(request, "No se encontró ningún RUC registrado para sincronizar.")
 
     return redirect('lista_comprobantes')
 
