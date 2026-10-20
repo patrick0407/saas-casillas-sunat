@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
-
+from django.db.models import Q
 from .models import ClienteRuc, PerfilEstudio, Comprobante
 from .forms import PerfilEstudioForm
 from automatizacion.bot_sunat import extraer_historial_sire
@@ -128,29 +128,25 @@ def lista_rucs_view(request):
 
 @login_required
 def lista_comprobantes(request):
-    try:
-        rucs_usuario = ClienteRuc.objects.filter(estudio__usuario=request.user).values_list('ruc', flat=True)
-        comprobantes = Comprobante.objects.filter(ruc_propietario__in=rucs_usuario).order_by('-fecha_emision')
-    except Exception:
-        comprobantes = Comprobante.objects.all().order_by('-fecha_emision')
+    comprobantes = Comprobante.objects.all().order_by('-fecha_emision')
 
-    # Filtros
     origen_filter = request.GET.get('origen')
-    ruc_filter = request.GET.get('ruc')
-    tipo_filter = request.GET.get('tipo')
-    serie_filter = request.GET.get('serie')
-    numero_filter = request.GET.get('numero')
+    ruc_filter = request.GET.get('ruc', '').strip()
+    mes_filter = request.GET.get('mes', '').strip()
 
+    # Si filtran por Origen (RECIBIDO = Compras / EMITIDO = Ventas)
     if origen_filter:
         comprobantes = comprobantes.filter(origen=origen_filter)
+
+    # Buscar RUC tanto si es el Propietario (Adolfo) como si es la Contraparte (Proveedor/Cliente)
     if ruc_filter:
-        comprobantes = comprobantes.filter(ruc_contraparte__icontains=ruc_filter)
-    if tipo_filter:
-        comprobantes = comprobantes.filter(tipo_comprobante=tipo_filter)
-    if serie_filter:
-        comprobantes = comprobantes.filter(serie__icontains=serie_filter)
-    if numero_filter:
-        comprobantes = comprobantes.filter(numero__icontains=numero_filter)
+        comprobantes = comprobantes.filter(
+            Q(ruc_propietario__icontains=ruc_filter) | Q(ruc_contraparte__icontains=ruc_filter)
+        )
+
+    # Filtrar por Mes si se selecciona uno específico
+    if mes_filter:
+        comprobantes = comprobantes.filter(fecha_emision__month=mes_filter)
 
     context = {
         'comprobantes': comprobantes,
