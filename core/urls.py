@@ -23,6 +23,7 @@ from automatizacion.views import bandeja_casilla_view, marcar_leido_view
 from clientes.views import configuracion_estudio_view  
 from clientes.views import cuenta_suspendida_view
 from clientes.views import lista_comprobantes
+from clientes import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -36,6 +37,8 @@ urlpatterns = [
     path('configuracion/', configuracion_estudio_view, name='configuracion_estudio'),
     path('suspendido/', cuenta_suspendida_view, name='cuenta_suspendida'),
     path('comprobantes/', lista_comprobantes, name='lista_comprobantes'),
+    path('comprobantes/', views.lista_comprobantes, name='lista_comprobantes'),
+    path('sincronizar-sunat/', views.sincronizar_manual_sunat, name='sincronizar_manual_sunat'), # <--- AGREGAR ESTA LÍNEA
 ]
 
 if settings.DEBUG:

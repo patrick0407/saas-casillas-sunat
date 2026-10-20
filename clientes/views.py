@@ -134,17 +134,14 @@ def lista_comprobantes(request):
     ruc_filter = request.GET.get('ruc', '').strip()
     mes_filter = request.GET.get('mes', '').strip()
 
-    # Si filtran por Origen (RECIBIDO = Compras / EMITIDO = Ventas)
     if origen_filter:
         comprobantes = comprobantes.filter(origen=origen_filter)
 
-    # Buscar RUC tanto si es el Propietario (Adolfo) como si es la Contraparte (Proveedor/Cliente)
     if ruc_filter:
         comprobantes = comprobantes.filter(
             Q(ruc_propietario__icontains=ruc_filter) | Q(ruc_contraparte__icontains=ruc_filter)
         )
 
-    # Filtrar por Mes si se selecciona uno específico
     if mes_filter:
         comprobantes = comprobantes.filter(fecha_emision__month=mes_filter)
 
@@ -152,6 +149,28 @@ def lista_comprobantes(request):
         'comprobantes': comprobantes,
     }
     return render(request, 'comprobantes.html', context)
+
+@login_required
+def sincronizar_manual_sunat(request):
+    # Obtener el RUC enviado por el usuario o tomar el primero registrado
+    ruc_numero = request.GET.get('ruc') or request.POST.get('ruc')
+    
+    if ruc_numero:
+        cliente = ClienteRuc.objects.filter(ruc=ruc_numero).first()
+    else:
+        cliente = ClienteRuc.objects.filter(usuario=request.user).first()
+
+    if cliente:
+        try:
+            # Ejecuta el bot de Selenium manualmente al presionar el botón
+            extraer_historial_sire(cliente.id)
+            messages.success(request, f"¡Sincronización completada con éxito para el RUC {cliente.ruc}!")
+        except Exception as e:
+            messages.error(request, f"Ocurrió un error durante la sincronización: {str(e)}")
+    else:
+        messages.error(request, "No se encontró ningún RUC asociado para sincronizar.")
+
+    return redirect('lista_comprobantes')
 
 @login_required
 def configuracion_estudio_view(request):
