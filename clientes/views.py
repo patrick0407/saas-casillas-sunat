@@ -22,12 +22,12 @@ def crear_ruc_view(request):
 
             if not ruc_ingresado or not usuario_sol or not clave_sol:
                 messages.error(request, "Por favor completa todos los campos requeridos.")
-                return render(request, 'clientes/crear_ruc.html')
+                return render(request, 'crear_ruc.html')
 
             # Obtener el perfil del estudio vinculado al usuario actual
             estudio, _ = PerfilEstudio.objects.get_or_create(usuario=request.user)
 
-            # Intentar guardar en Neon
+            # Guardar o actualizar el RUC
             cliente, creado = ClienteRuc.objects.get_or_create(
                 ruc=ruc_ingresado,
                 defaults={
@@ -48,23 +48,26 @@ def crear_ruc_view(request):
             else:
                 messages.success(request, f"¡RUC {ruc_ingresado} registrado con éxito!")
 
-            # Disparar el bot en segundo plano
+            # Disparar la sincronización en segundo plano
             try:
                 hilo_bot = threading.Thread(target=extraer_historial_sire, args=(cliente.id,))
                 hilo_bot.daemon = True
                 hilo_bot.start()
             except Exception as e_bot:
-                print(f"Error al iniciar bot: {str(e_bot)}")
+                print(f"Aviso al iniciar bot: {str(e_bot)}")
 
-            # Redirección segura al dashboard
             return redirect('dashboard')
 
         except Exception as e:
-            # Captura el error en la interfaz en lugar de lanzar Error 500
-            messages.error(request, f"No se pudo guardar el RUC: {str(e)}")
-            return render(request, 'clientes/crear_ruc.html')
+            messages.error(request, f"Error al procesar el formulario: {str(e)}")
+            return render(request, 'crear_ruc.html')
 
-    return render(request, 'clientes/crear_ruc.html')
+    # Si es método GET (abrir la página por primera vez)
+    try:
+        return render(request, 'crear_ruc.html')
+    except Exception:
+        # Si la plantilla está dentro de la carpeta clientes
+        return render(request, 'clientes/crear_ruc.html')
     
 
 # --- VISTAS DE AUTENTICACIÓN ---
