@@ -1,15 +1,17 @@
+import threading
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages
+
 from .models import ClienteRuc, PerfilEstudio, Comprobante
 from .forms import PerfilEstudioForm
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .models import ClienteRuc
 from automatizacion.bot_sunat import extraer_historial_sire
-import threading
 
+# --- CREAR Y GESTIONAR RUCS ---
+
+@login_required
 def crear_ruc_view(request):
     if request.method == 'POST':
         ruc_ingresado = request.POST.get('ruc', '').strip()
@@ -17,10 +19,18 @@ def crear_ruc_view(request):
         usuario_sol = request.POST.get('usuario_sol', '').strip()
         clave_sol = request.POST.get('clave_sol', '').strip()
 
-        # 1. Evitar duplicados para el mismo usuario / perfil
+        if not ruc_ingresado or not usuario_sol or not clave_sol:
+            messages.error(request, "Por favor completa todos los campos requeridos.")
+            return render(request, 'clientes/crear_ruc.html')
+
+        # 1. Obtener o crear el perfil del estudio del usuario logueado
+        estudio, _ = PerfilEstudio.objects.get_or_create(usuario=request.user)
+
+        # 2. Guardar o actualizar en Neon vinculando SIEMPRE al estudio
         cliente, creado = ClienteRuc.objects.get_or_create(
             ruc=ruc_ingresado,
             defaults={
+                'estudio': estudio,
                 'razon_social': razon_social,
                 'usuario_sol': usuario_sol,
                 'clave_sol': clave_sol,
@@ -28,24 +38,25 @@ def crear_ruc_view(request):
         )
 
         if not creado:
-            # Si ya existía, actualizamos credenciales por si las cambió
+            # Si ya existía, actualizamos credenciales y aseguramos la vinculación al estudio
+            cliente.estudio = estudio
             cliente.razon_social = razon_social
             cliente.usuario_sol = usuario_sol
             cliente.clave_sol = clave_sol
             cliente.save()
-            messages.info(request, f"El RUC {ruc_ingresado} ya existía. Se actualizaron sus datos correctamente.")
+            messages.info(request, f"El RUC {ruc_ingresado} ya existía. Se actualizaron sus datos y vinculación.")
         else:
             messages.success(request, f"RUC {ruc_ingresado} registrado con éxito.")
 
-        # 2. Ejecutar el bot de SUNAT automáticamente en segundo plano (hilo independiente)
-        # Esto evita que la página web se quede cargando infinitamente mientras Selenium trabaja
+        # 3. Ejecutar el bot de SUNAT automáticamente en segundo plano (hilo independiente)
         hilo_bot = threading.Thread(target=extraer_historial_sire, args=(cliente.id,))
         hilo_bot.daemon = True
         hilo_bot.start()
 
-        return redirect('mis_rucs') # O la vista donde listas los RUCs
+        return redirect('lista_rucs')  # O 'mis_rucs' según el nombre en tu urls.py
 
     return render(request, 'clientes/crear_ruc.html')
+
 
 # --- VISTAS DE AUTENTICACIÓN ---
 
@@ -81,13 +92,11 @@ def logout_view(request):
 # --- VISTAS DEL DASHBOARD Y RUCS ---
 
 def dashboard_casillas(request):
-    # 1. Si no es superusuario, verificar suscripción activa
     if not request.user.is_superuser:
         estudio = getattr(request.user, 'perfil_estudio', None)
         if not estudio and hasattr(request.user, 'estudios_asociados') and request.user.estudios_asociados.exists():
             estudio = request.user.estudios_asociados.first()
 
-        # Si no tiene estudio o su suscripción NO es válida, mandar a suspendido
         if not estudio or not getattr(estudio, 'suscripcion_valida', True):
             return redirect('cuenta_suspendida')
 
@@ -101,11 +110,12 @@ def dashboard_view(request):
 
 @login_required
 def lista_rucs_view(request):
-    estudio = getattr(request.user, 'perfil_estudio', None)
-    rucs = ClienteRuc.objects.filter(estudio=estudio) if estudio else []
+    estudio, _ = PerfilEstudio.objects.get_or_create(usuario=request.user)
+    rucs = ClienteRuc.objects.filter(estudio=estudio)
     return render(request, 'lista_rucs.html', {'rucs': rucs})
 
 
+# --- VISTA DE COMPROBANTES Y FACTURAS (SIRE) ---
 
 @login_required
 def lista_comprobantes(request):
@@ -158,7 +168,3 @@ def configuracion_estudio_view(request):
 
 def cuenta_suspendida_view(request):
     return render(request, 'cuenta_suspendida.html')
-
-
-# --- VISTA DE COMPROBANTES Y FACTURAS (SIRE) ---
-
