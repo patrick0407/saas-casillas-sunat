@@ -1,125 +1,129 @@
 {% extends 'base.html' %}
 
-{% block title %}Consulta de Comprobantes de Pago | SaaS SUNAT{% endblock %}
-
 {% block content %}
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-slate-800">Consulta de Comprobantes de Pago (SIRE)</h1>
+<div class="container mx-auto px-4 py-6">
+
+  <!-- Título y Encabezado Estilo SUNAT -->
+  <div class="mb-6 border-b pb-3 flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Consulta de Comprobantes de Pago (SIRE)</h1>
+      <p class="text-sm text-gray-500">Registro de Compras Electrónico (RCE) y Registro de Ventas e Ingresos Electrónico (RVIE)</p>
     </div>
+    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full border border-blue-300">
+      Estado: Sincronizado
+    </span>
+  </div>
 
-    <!-- Formulario de Búsqueda estilo SUNAT -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <form method="GET" class="space-y-4">
-            <!-- Filtro Origen: Emitido vs Recibido -->
-            <div class="flex items-center space-x-6 border-b border-slate-100 pb-3">
-                <span class="text-sm font-semibold text-slate-700">Filtro de comprobante:</span>
-                <label class="inline-flex items-center cursor-pointer text-sm font-medium text-slate-700">
-                    <input type="radio" name="origen" value="EMITIDO" {% if request.GET.origen == 'EMITIDO' %}checked{% endif %} class="text-blue-600 focus:ring-blue-500 h-4 w-4">
-                    <span class="ml-2">Emitido</span>
-                </label>
-                <label class="inline-flex items-center cursor-pointer text-sm font-medium text-slate-700">
-                    <input type="radio" name="origen" value="RECIBIDO" {% if request.GET.origen == 'RECIBIDO' or not request.GET.origen %}checked{% endif %} class="text-blue-600 focus:ring-blue-500 h-4 w-4">
-                    <span class="ml-2">Recibido</span>
-                </label>
-            </div>
+  <!-- Panel de Filtros Estilo SIRE SUNAT -->
+  <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mb-6">
+    <form method="GET" action="" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+      
+      <!-- 1. Registro (Origen) -->
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Registro / Módulo</label>
+        <select name="origen" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+          <option value="RECIBIDO" {% if request.GET.origen == 'RECIBIDO' or not request.GET.origen %}selected{% endif %}>RCE - Compras (Recibidos)</option>
+          <option value="EMITIDO" {% if request.GET.origen == 'EMITIDO' %}selected{% endif %}>RVIE - Ventas (Emitidos)</option>
+        </select>
+      </div>
 
-            <!-- Campos RUC, Tipo, Serie y Número -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">RUC Emisor / Contraparte (*)</label>
-                    <input type="text" name="ruc" class="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ingrese RUC" value="{{ request.GET.ruc }}">
-                </div>
+      <!-- 2. Año -->
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Año</label>
+        <select name="anio" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+          <option value="2026" selected>2026 - Presentado</option>
+          <option value="2025">2025 - Presentado</option>
+        </select>
+      </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo de comprobante (*)</label>
-                    <select name="tipo" class="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="">Todos</option>
-                        <option value="01" {% if request.GET.tipo == '01' %}selected{% endif %}>Factura</option>
-                        <option value="03" {% if request.GET.tipo == '03' %}selected{% endif %}>Boleta de Venta</option>
-                        <option value="07" {% if request.GET.tipo == '07' %}selected{% endif %}>Nota de Crédito</option>
-                        <option value="08" {% if request.GET.tipo == '08' %}selected{% endif %}>Nota de Débito</option>
-                    </select>
-                </div>
+      <!-- 3. Periodo / Mes -->
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Periodo / Mes</label>
+        <select name="mes" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+          <option value="">Todos los meses</option>
+          <option value="01">ENE - Enero</option>
+          <option value="02">FEB - Febrero</option>
+          <option value="03">MAR - Marzo</option>
+          <option value="04">ABR - Abril</option>
+          <option value="05">MAY - Mayo</option>
+          <option value="06">JUN - Junio</option>
+          <option value="07">JUL - Julio</option>
+          <option value="08" {% if not request.GET.mes or request.GET.mes == '08' %}selected{% endif %}>AGO - Agosto</option>
+          <option value="09">SET - Setiembre</option>
+          <option value="10">OCT - Octubre</option>
+          <option value="11">NOV - Noviembre</option>
+          <option value="12">DIC - Diciembre</option>
+        </select>
+      </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Serie y número del comprobante (*)</label>
-                    <div class="flex items-center space-x-2">
-                        <input type="text" name="serie" class="w-1/3 text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="F001" value="{{ request.GET.serie }}">
-                        <span class="text-slate-400 font-bold">-</span>
-                        <input type="text" name="numero" class="w-2/3 text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="000001" value="{{ request.GET.numero }}">
-                    </div>
-                </div>
-            </div>
+      <!-- 4. RUC / Buscar Contraparte -->
+      <div>
+        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">RUC Proveedor / Cliente</label>
+        <input type="text" name="ruc" value="{{ request.GET.ruc }}" placeholder="Ej: 20547836473" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+      </div>
 
-            <!-- Botones -->
-            <div class="flex justify-end space-x-3 pt-2">
-                <a href="{% url 'lista_comprobantes' %}" class="px-5 py-2.5 border border-slate-300 text-slate-600 hover:bg-slate-50 font-medium rounded-lg text-sm transition">
-                    Limpiar
-                </a>
-                <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition shadow-sm flex items-center">
-                    <i class="fa-solid fa-magnifying-glass mr-2"></i> Consultar
-                </button>
-            </div>
-        </form>
+      <!-- Botón Consultar -->
+      <div>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded text-sm transition shadow-sm flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          Consultar SIRE
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabla de Resultados Identica a SUNAT -->
+  <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 text-xs">
+        <thead class="bg-gray-100 text-gray-700 uppercase font-bold">
+          <tr>
+            <th class="px-3 py-3 text-left">Fecha Emisión</th>
+            <th class="px-3 py-3 text-center">Tipo Doc</th>
+            <th class="px-3 py-3 text-left">Serie</th>
+            <th class="px-3 py-3 text-left">Nro CP Inicial</th>
+            <th class="px-3 py-3 text-left">Nro Doc Identidad</th>
+            <th class="px-3 py-3 text-left">Apellidos Nombres / Razón Social</th>
+            <th class="px-3 py-3 text-right">Monto Total (S/)</th>
+            <th class="px-3 py-3 text-center">Descargas</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+          {% for c in comprobantes %}
+          <tr class="hover:bg-blue-50 transition">
+            <td class="px-3 py-3 whitespace-nowrap text-gray-700">{{ c.fecha_emision|date:"d/m/Y" }}</td>
+            <td class="px-3 py-3 text-center font-mono text-gray-600">{{ c.tipo_comprobante }}</td>
+            <td class="px-3 py-3 font-bold text-blue-700">{{ c.serie }}</td>
+            <td class="px-3 py-3 font-mono text-blue-700">{{ c.numero }}</td>
+            <td class="px-3 py-3 font-mono text-gray-800">{{ c.ruc_contraparte }}</td>
+            <td class="px-3 py-3 max-w-xs truncate font-medium text-gray-900">{{ c.razon_social_contraparte|default:"PROVEEDOR REGISTRADO" }}</td>
+            <td class="px-3 py-3 text-right font-bold text-gray-900">S/ {{ c.monto_total }}</td>
+            <td class="px-3 py-3 text-center space-x-1">
+              {% if c.archivo_pdf %}
+                <a href="{{ c.archivo_pdf.url }}" target="_blank" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs font-bold shadow-sm">PDF</a>
+              {% else %}
+                <span class="bg-gray-200 text-gray-500 px-2 py-1 rounded text-xs">PDF</span>
+              {% endif %}
+              
+              {% if c.archivo_xml %}
+                <a href="{{ c.archivo_xml.url }}" download class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-bold shadow-sm">XML</a>
+              {% else %}
+                <span class="bg-gray-200 text-gray-500 px-2 py-1 rounded text-xs">XML</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-10 text-gray-500">
+              <svg class="mx-auto h-10 w-10 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              No se encontraron comprobantes o facturas registradas para el filtro seleccionado.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <!-- Tabla de Comprobantes -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                        <th class="p-4">Fecha</th>
-                        <th class="p-4">Origen</th>
-                        <th class="p-4">Tipo</th>
-                        <th class="p-4">Serie-Número</th>
-                        <th class="p-4">RUC Contraparte</th>
-                        <th class="p-4">Monto Total</th>
-                        <th class="p-4 text-center">Acciones / Descargas</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-sm">
-                    {% for comp in comprobantes %}
-                    <tr class="hover:bg-slate-50/80 transition">
-                        <td class="p-4 text-slate-600">{{ comp.fecha_emision }}</td>
-                        <td class="p-4">
-                            {% if comp.origen == 'EMITIDO' %}
-                                <span class="px-2.5 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-full">Emitido</span>
-                            {% else %}
-                                <span class="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full">Recibido</span>
-                            {% endif %}
-                        </td>
-                        <td class="p-4 font-medium text-slate-800">{{ comp.get_tipo_comprobante_display }}</td>
-                        <td class="p-4 font-bold text-slate-900">{{ comp.serie }}-{{ comp.numero }}</td>
-                        <td class="p-4 text-slate-600">{{ comp.ruc_contraparte }}</td>
-                        <td class="p-4 font-semibold text-slate-800">S/ {{ comp.monto_total }}</td>
-                        <td class="p-4 text-center space-x-2">
-                            {% if comp.archivo_pdf %}
-                                <a href="{{ comp.archivo_pdf.url }}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md font-medium text-xs transition">
-                                    <i class="fa-solid fa-file-pdf mr-1.5"></i> PDF
-                                </a>
-                            {% else %}
-                                <span class="text-xs text-slate-400">Sin PDF</span>
-                            {% endif %}
-
-                            {% if comp.archivo_xml %}
-                                <a href="{{ comp.archivo_xml.url }}" download class="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md font-medium text-xs transition">
-                                    <i class="fa-solid fa-file-code mr-1.5"></i> XML
-                                </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="p-8 text-center text-slate-400">
-                            No se encontraron comprobantes o facturas registradas.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
 {% endblock %}

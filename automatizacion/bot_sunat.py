@@ -29,7 +29,7 @@ def procesar_casilla_sunat_invisible(cliente: ClienteRuc):
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         wait = WebDriverWait(driver, 25)
 
-        # 1. Login SOL
+        # 1. Login SOL SUNAT
         url_sunat = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm"
         for intento in range(3):
             try:
@@ -38,10 +38,23 @@ def procesar_casilla_sunat_invisible(cliente: ClienteRuc):
             except Exception:
                 time.sleep(2)
 
-        wait.until(EC.presence_of_element_located((By.ID, "txtRuc"))).send_keys(cliente.ruc)
-        driver.find_element(By.ID, "txtUsuario").send_keys(cliente.usuario_sol)
-        driver.find_element(By.ID, "txtContrasena").send_keys(cliente.clave_sol)
-        driver.find_element(By.ID, "btnAceptar").click()
+        input_ruc = wait.until(EC.element_to_be_clickable((By.ID, "txtRuc")))
+        input_ruc.click()
+        input_ruc.clear()
+        input_ruc.send_keys(cliente.ruc.strip())
+
+        input_user = driver.find_element(By.ID, "txtUsuario")
+        input_user.click()
+        input_user.clear()
+        input_user.send_keys(cliente.usuario_sol.strip())
+
+        input_pass = driver.find_element(By.ID, "txtContrasena")
+        input_pass.click()
+        input_pass.clear()
+        input_pass.send_keys(cliente.clave_sol.strip())
+
+        btn_aceptar = driver.find_element(By.ID, "btnAceptar")
+        driver.execute_script("arguments[0].click();", btn_aceptar)
 
         time.sleep(5)
         print(f"Sesión iniciada correctamente para el RUC: {cliente.ruc}")
@@ -50,47 +63,50 @@ def procesar_casilla_sunat_invisible(cliente: ClienteRuc):
         captura_path = os.path.join(settings.BASE_DIR, 'pantalla_sunat.png')
         driver.save_screenshot(captura_path)
 
-        # 2. Manejo de iFrames y Menú SIRE de SUNAT
-        # SUNAT carga su menú principal dentro de iFrames
+        # 2. Manejo de iFrame de SUNAT si existe
         iframes = driver.find_elements(By.TAG_NAME, "iframe")
         if iframes:
             driver.switch_to.frame(iframes[0])
 
-        # Recorrer tablas o filas encontradas dentro del portal
+        # 3. Mapeo de la tabla de la Propuesta del RCE (FALABELLA, Mercadolibre, BCP, etc.)
         filas = driver.find_elements(By.XPATH, "//table//tr[td]")
+        comprobantes_creados = 0
         for fila in filas:
             cols = fila.find_elements(By.TAG_NAME, "td")
-            if len(cols) >= 5:
-                fecha_str = cols[0].text.strip()
-                tipo_comp = cols[1].text.strip()
-                serie_num = cols[2].text.strip()
-                ruc_contra = cols[3].text.strip()
-                monto_str = cols[4].text.strip()
-
-                if '-' in serie_num:
-                    serie, numero = serie_num.split('-', 1)
-                else:
-                    serie, numero = 'F001', serie_num
+            if len(cols) >= 9:
+                fecha_emision = cols[1].text.strip()     # Ej: 04/08/2026
+                tipo_cp = cols[3].text.strip()           # Ej: 01
+                serie = cols[4].text.strip()             # Ej: F004
+                numero = cols[5].text.strip()            # Ej: 244708
+                ruc_contraparte = cols[7].text.strip()   # Ej: 20547836473
+                razon_social = cols[8].text.strip()      # Ej: FALABELLA.COM S.A.C.
+                monto_str = cols[9].text.strip()         # Ej: 28.90
 
                 try:
                     monto = float(monto_str.replace(',', ''))
                 except ValueError:
                     monto = 0.0
 
+                try:
+                    fecha_obj = datetime.strptime(fecha_emision, "%d/%m/%Y").date()
+                except Exception:
+                    fecha_obj = timezone.now().date()
+
                 Comprobante.objects.get_or_create(
                     ruc_propietario=cliente.ruc,
                     serie=serie,
                     numero=numero,
                     defaults={
-                        'ruc_contraparte': ruc_contra,
-                        'tipo_comprobante': '01' if 'Factura' in tipo_comp else '03',
-                        'fecha_emision': timezone.now().date(),
+                        'ruc_contraparte': ruc_contraparte,
+                        'tipo_comprobante': tipo_cp,
+                        'fecha_emision': fecha_obj,
                         'monto_total': monto,
-                        'origen': 'EMITIDO',
+                        'origen': 'RECIBIDO',
                     }
                 )
+                comprobantes_creados += 1
 
-        print(f"Sincronización finalizada para RUC: {cliente.ruc}")
+        print(f"Sincronización finalizada para RUC {cliente.ruc}. Registros guardados: {comprobantes_creados}")
 
     except Exception as e:
         print(f"Error procesando RUC {cliente.ruc}: {str(e)}")
