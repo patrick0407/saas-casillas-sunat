@@ -2,6 +2,17 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from django_apscheduler.jobstores import DjangoJobStore
 from clientes.models import ClienteRuc
 from .bot_sunat import procesar_casilla_sunat_invisible
+from clientes.models import ClienteRuc
+from .bot_sunat import extraer_historial_sire
+
+def sincronizar_todo_el_historial():
+    # Obtiene todos los RUCs activos registrados por los clientes
+    rucs_activos = ClienteRuc.objects.filter(activo=True)
+    for cliente in rucs_activos:
+        try:
+            extraer_historial_sire(cliente.id)
+        except Exception as e:
+            print(f"Error procesando RUC {cliente.ruc}: {e}")
 
 def ejecutar_revision_masiva():
     """Recorre todos los RUCs activos y extrae sus notificaciones de SUNAT."""
