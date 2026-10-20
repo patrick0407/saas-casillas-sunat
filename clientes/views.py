@@ -11,6 +11,7 @@ from automatizacion.bot_sunat import extraer_historial_sire
 
 # --- CREAR Y GESTIONAR RUCS ---
 
+
 @login_required
 def crear_ruc_view(request):
     if request.method == 'POST':
@@ -24,10 +25,10 @@ def crear_ruc_view(request):
                 messages.error(request, "Por favor completa todos los campos requeridos.")
                 return render(request, 'crear_ruc.html')
 
-            # Obtener el perfil del estudio vinculado al usuario actual
+            # 1. Obtener o crear el perfil del estudio del usuario logueado
             estudio, _ = PerfilEstudio.objects.get_or_create(usuario=request.user)
 
-            # Guardar o actualizar el RUC
+            # 2. Guardar o actualizar en Neon vinculando el estudio
             cliente, creado = ClienteRuc.objects.get_or_create(
                 ruc=ruc_ingresado,
                 defaults={
@@ -48,7 +49,7 @@ def crear_ruc_view(request):
             else:
                 messages.success(request, f"¡RUC {ruc_ingresado} registrado con éxito!")
 
-            # Disparar la sincronización en segundo plano
+            # 3. Disparar el bot de SUNAT automáticamente en segundo plano
             try:
                 hilo_bot = threading.Thread(target=extraer_historial_sire, args=(cliente.id,))
                 hilo_bot.daemon = True
@@ -63,11 +64,7 @@ def crear_ruc_view(request):
             return render(request, 'crear_ruc.html')
 
     # Si es método GET (abrir la página por primera vez)
-    try:
-        return render(request, 'crear_ruc.html')
-    except Exception:
-        # Si la plantilla está dentro de la carpeta clientes
-        return render(request, 'clientes/crear_ruc.html')
+    return render(request, 'crear_ruc.html')
     
 
 # --- VISTAS DE AUTENTICACIÓN ---
