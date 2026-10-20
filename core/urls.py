@@ -38,7 +38,7 @@ urlpatterns = [
     path('suspendido/', cuenta_suspendida_view, name='cuenta_suspendida'),
     path('comprobantes/', lista_comprobantes, name='lista_comprobantes'),
     path('comprobantes/', views.lista_comprobantes, name='lista_comprobantes'),
-    path('sincronizar-sunat/', views.sincronizar_manual_sunat, name='sincronizar_manual_sunat'), # <--- AGREGAR ESTA LÍNEA
+    path('sincronizar-sunat/', views.sincronizar_manual_sunat, name='sincronizar_manual_sunat'),
 ]
 
 if settings.DEBUG:
