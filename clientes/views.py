@@ -14,49 +14,58 @@ from automatizacion.bot_sunat import extraer_historial_sire
 @login_required
 def crear_ruc_view(request):
     if request.method == 'POST':
-        ruc_ingresado = request.POST.get('ruc', '').strip()
-        razon_social = request.POST.get('razon_social', '').strip()
-        usuario_sol = request.POST.get('usuario_sol', '').strip()
-        clave_sol = request.POST.get('clave_sol', '').strip()
+        try:
+            ruc_ingresado = request.POST.get('ruc', '').strip()
+            razon_social = request.POST.get('razon_social', '').strip()
+            usuario_sol = request.POST.get('usuario_sol', '').strip()
+            clave_sol = request.POST.get('clave_sol', '').strip()
 
-        if not ruc_ingresado or not usuario_sol or not clave_sol:
-            messages.error(request, "Por favor completa todos los campos requeridos.")
+            if not ruc_ingresado or not usuario_sol or not clave_sol:
+                messages.error(request, "Por favor completa todos los campos requeridos.")
+                return render(request, 'clientes/crear_ruc.html')
+
+            # Obtener el perfil del estudio vinculado al usuario actual
+            estudio, _ = PerfilEstudio.objects.get_or_create(usuario=request.user)
+
+            # Intentar guardar en Neon
+            cliente, creado = ClienteRuc.objects.get_or_create(
+                ruc=ruc_ingresado,
+                defaults={
+                    'estudio': estudio,
+                    'razon_social': razon_social,
+                    'usuario_sol': usuario_sol,
+                    'clave_sol': clave_sol,
+                }
+            )
+
+            if not creado:
+                cliente.estudio = estudio
+                cliente.razon_social = razon_social
+                cliente.usuario_sol = usuario_sol
+                cliente.clave_sol = clave_sol
+                cliente.save()
+                messages.info(request, f"El RUC {ruc_ingresado} ya existía. Se actualizaron sus datos.")
+            else:
+                messages.success(request, f"¡RUC {ruc_ingresado} registrado con éxito!")
+
+            # Disparar el bot en segundo plano
+            try:
+                hilo_bot = threading.Thread(target=extraer_historial_sire, args=(cliente.id,))
+                hilo_bot.daemon = True
+                hilo_bot.start()
+            except Exception as e_bot:
+                print(f"Error al iniciar bot: {str(e_bot)}")
+
+            # Redirección segura al dashboard
+            return redirect('dashboard')
+
+        except Exception as e:
+            # Captura el error en la interfaz en lugar de lanzar Error 500
+            messages.error(request, f"No se pudo guardar el RUC: {str(e)}")
             return render(request, 'clientes/crear_ruc.html')
 
-        # 1. Obtener o crear el perfil del estudio del usuario logueado
-        estudio, _ = PerfilEstudio.objects.get_or_create(usuario=request.user)
-
-        # 2. Guardar o actualizar en Neon vinculando SIEMPRE al estudio
-        cliente, creado = ClienteRuc.objects.get_or_create(
-            ruc=ruc_ingresado,
-            defaults={
-                'estudio': estudio,
-                'razon_social': razon_social,
-                'usuario_sol': usuario_sol,
-                'clave_sol': clave_sol,
-            }
-        )
-
-        if not creado:
-            # Si ya existía, actualizamos credenciales y aseguramos la vinculación al estudio
-            cliente.estudio = estudio
-            cliente.razon_social = razon_social
-            cliente.usuario_sol = usuario_sol
-            cliente.clave_sol = clave_sol
-            cliente.save()
-            messages.info(request, f"El RUC {ruc_ingresado} ya existía. Se actualizaron sus datos y vinculación.")
-        else:
-            messages.success(request, f"RUC {ruc_ingresado} registrado con éxito.")
-
-        # 3. Ejecutar el bot de SUNAT automáticamente en segundo plano (hilo independiente)
-        hilo_bot = threading.Thread(target=extraer_historial_sire, args=(cliente.id,))
-        hilo_bot.daemon = True
-        hilo_bot.start()
-
-        return redirect('lista_rucs')  # O 'mis_rucs' según el nombre en tu urls.py
-
     return render(request, 'clientes/crear_ruc.html')
-
+    
 
 # --- VISTAS DE AUTENTICACIÓN ---
 
