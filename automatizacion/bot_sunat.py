@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -23,30 +24,18 @@ def procesar_casilla_sunat_invisible(cliente: ClienteRuc):
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
 
-    prefs = {
-        "download.default_directory": download_dir,
-        "download.prompt_for_download": False,
-        "download.directory_upgrade": True,
-        "plugins.always_open_pdf_externally": True
-    }
-    options.add_experimental_option("prefs", prefs)
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-
     driver = None
     try:
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        wait = WebDriverWait(driver, 30)
+        wait = WebDriverWait(driver, 25)
 
-        # 1. Login SOL SUNAT
+        # 1. Login SOL
         url_sunat = "https://e-menu.sunat.gob.pe/cl-ti-itmenu/MenuInternet.htm"
         for intento in range(3):
             try:
                 driver.get(url_sunat)
                 break
-            except Exception as err:
-                if intento == 2:
-                    raise err
+            except Exception:
                 time.sleep(2)
 
         wait.until(EC.presence_of_element_located((By.ID, "txtRuc"))).send_keys(cliente.ruc)
@@ -57,27 +46,17 @@ def procesar_casilla_sunat_invisible(cliente: ClienteRuc):
         time.sleep(5)
         print(f"Sesión iniciada correctamente para el RUC: {cliente.ruc}")
 
-        # Guardar captura de pantalla de inspección
+        # Guardar captura de pantalla de verificación
         captura_path = os.path.join(settings.BASE_DIR, 'pantalla_sunat.png')
         driver.save_screenshot(captura_path)
-        print(f"Captura guardada en: {captura_path}")
 
-        # Cerrar posibles avisos o pop-ups iniciales
-        try:
-            btn_cerrar = driver.find_elements(By.XPATH, "//button[contains(text(),'Aceptar') or contains(text(),'Cerrar') or @class='btn-primary']")
-            if btn_cerrar:
-                btn_cerrar[0].click()
-                time.sleep(2)
-        except Exception:
-            pass
+        # 2. Manejo de iFrames y Menú SIRE de SUNAT
+        # SUNAT carga su menú principal dentro de iFrames
+        iframes = driver.find_elements(By.TAG_NAME, "iframe")
+        if iframes:
+            driver.switch_to.frame(iframes[0])
 
-        # 2. Navegación al SIRE / Lectura de tablas
-        btn_empresa = driver.find_elements(By.XPATH, "//button[contains(text(), 'Empresas') or contains(text(), 'EMPRESAS')]")
-        if btn_empresa:
-            btn_empresa[0].click()
-            time.sleep(2)
-
-        # Recorrer filas de comprobantes encontradas en pantalla
+        # Recorrer tablas o filas encontradas dentro del portal
         filas = driver.find_elements(By.XPATH, "//table//tr[td]")
         for fila in filas:
             cols = fila.find_elements(By.TAG_NAME, "td")
@@ -110,6 +89,8 @@ def procesar_casilla_sunat_invisible(cliente: ClienteRuc):
                         'origen': 'EMITIDO',
                     }
                 )
+
+        print(f"Sincronización finalizada para RUC: {cliente.ruc}")
 
     except Exception as e:
         print(f"Error procesando RUC {cliente.ruc}: {str(e)}")
