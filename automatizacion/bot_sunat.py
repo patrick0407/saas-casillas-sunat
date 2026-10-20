@@ -105,7 +105,7 @@ def procesar_casilla_sunat_invisible(cliente: ClienteRuc):
                         defaults={
                             'ruc_contraparte': ruc_contra,
                             'tipo_comprobante': '01' if 'Factura' in tipo_comp else '03',
-                            'fecha_emision': fecha_str if fecha_str else timezone.now().date(),
+                            'fecha_emision': datetime.now().date(),
                             'monto_total': monto,
                             'origen': 'EMITIDO',
                         }
