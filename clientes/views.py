@@ -126,9 +126,33 @@ def lista_rucs_view(request):
 
 @login_required
 def lista_comprobantes(request):
+    # Obtener todos los comprobantes registrados
     comprobantes = Comprobante.objects.all().order_by('-fecha_emision')
-    print("DEBUG COMPROBANTES ENCONTRADOS:", comprobantes.count()) # <-- ESTO SALDRÁ EN TU TERMINAL DE VS CODE
-    
+
+    # Captura de parámetros GET (solo si el usuario realmente los aplicó)
+    origen_filter = request.GET.get('origen', '').strip()
+    anio_filter = request.GET.get('anio', '').strip()
+    mes_filter = request.GET.get('mes', '').strip()
+    ruc_filter = request.GET.get('ruc', '').strip()
+
+    # Filtrar únicamente si el usuario seleccionó un origen explícito
+    if origen_filter:
+        comprobantes = comprobantes.filter(origen=origen_filter)
+
+    # Filtrar por Año solo si viene especificado
+    if anio_filter:
+        comprobantes = comprobantes.filter(fecha_emision__year=anio_filter)
+
+    # Filtrar por Mes solo si el usuario seleccionó un mes específico
+    if mes_filter:
+        comprobantes = comprobantes.filter(fecha_emision__month=mes_filter)
+
+    # Filtrar por RUC si el campo no está vacío
+    if ruc_filter:
+        comprobantes = comprobantes.filter(
+            Q(ruc_propietario__icontains=ruc_filter) | Q(ruc_contraparte__icontains=ruc_filter)
+        )
+
     context = {
         'comprobantes': comprobantes,
     }
