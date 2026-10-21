@@ -136,26 +136,43 @@ def lista_comprobantes(request):
 
 @login_required
 def sincronizar_manual_sunat(request):
-    # Intentar obtener el RUC desde la URL, de lo contrario buscar el primer RUC del usuario o del sistema
-    ruc_numero = request.GET.get('ruc', '').strip()
+    # Obtener el estudio del usuario o filtrar todos sus RUCs
+    estudio = getattr(request.user, 'perfil_estudio', None)
     
-    if ruc_numero:
-        cliente = ClienteRuc.objects.filter(ruc=ruc_numero).first()
+    if estudio:
+        rucs_a_sincronizar = ClienteRuc.objects.filter(estudio=estudio)
     else:
-        estudio = getattr(request.user, 'perfil_estudio', None)
-        if estudio:
-            cliente = ClienteRuc.objects.filter(estudio=estudio).first()
-        else:
-            cliente = ClienteRuc.objects.first()
+        rucs_a_sincronizar = ClienteRuc.objects.filter(usuario=request.user)
 
-    if cliente:
-        try:
-            extraer_historial_sire(cliente.id)
-            messages.success(request, f"¡Sincronización de SUNAT iniciada con éxito para el RUC {cliente.ruc}!")
-        except Exception as e:
-            messages.error(request, f"Error durante la sincronización: {str(e)}")
+    # Si por alguna razón no se encuentran vinculados al usuario directo, tomar todos los RUCs disponibles
+    if not rucs_a_sincronizar.exists():
+        rucs_a_sincronizar = ClienteRuc.objects.all()
+
+    if rucs_a_sincronizar.exists():
+        rucs_exitosos = []
+        rucs_fallidos = []
+
+        for cliente in rucs_a_sincronizar:
+            try:
+                # Ejecuta la extracción del bot SIRE para cada RUC registrado
+                extraer_historial_sire(cliente.id)
+                rucs_exitosos.append(cliente.ruc)
+            except Exception as e:
+                rucs_fallidos.append(f"{cliente.ruc} ({str(e)})")
+
+        # Generar mensajes informativos según los resultados
+        if rucs_exitosos:
+            messages.success(
+                request, 
+                f"¡Sincronización completada exitosamente para {len(rucs_exitosos)} RUC(s): {', '.join(rucs_exitosos)}!"
+            )
+        if rucs_fallidos:
+            messages.error(
+                request, 
+                f"Ocurrió un inconveniente al sincronizar los siguientes RUCs: {', '.join(rucs_fallidos)}"
+            )
     else:
-        messages.error(request, "No se encontró ningún RUC registrado para sincronizar.")
+        messages.error(request, "No se encontró ningún RUC registrado para ejecutar la sincronización.")
 
     return redirect('lista_comprobantes')
 
