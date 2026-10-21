@@ -1,0 +1,14 @@
+wget
+gnupg
+libnss3
+libatk-bridge2.0-0
+libcups2
+libdrm2
+libxkbcommon0
+libgbm1
+libasound2
+libgdk-pixbuf2.0-0
+libgtk-3-0
+libnspr4
+xdg-utils
+google-chrome-stable
