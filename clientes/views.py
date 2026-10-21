@@ -126,32 +126,9 @@ def lista_rucs_view(request):
 
 @login_required
 def lista_comprobantes(request):
-    # Traer todos los comprobantes ordenados por fecha
     comprobantes = Comprobante.objects.all().order_by('-fecha_emision')
-
-    origen_filter = request.GET.get('origen', '').strip()
-    anio_filter = request.GET.get('anio', '').strip()
-    mes_filter = request.GET.get('mes', '').strip()
-    ruc_filter = request.GET.get('ruc', '').strip()
-
-    # Filtrar por Origen solo si el usuario seleccionó uno específico
-    if origen_filter:
-        comprobantes = comprobantes.filter(origen=origen_filter)
-
-    # Filtrar por Año si viene en los parámetros
-    if anio_filter:
-        comprobantes = comprobantes.filter(fecha_emision__year=anio_filter)
-
-    # Filtrar por Mes solo si especifica un mes
-    if mes_filter:
-        comprobantes = comprobantes.filter(fecha_emision__month=mes_filter)
-
-    # Solo filtrar por RUC si el usuario escribió algo en el campo RUC
-    if ruc_filter:
-        comprobantes = comprobantes.filter(
-            Q(ruc_propietario__icontains=ruc_filter) | Q(ruc_contraparte__icontains=ruc_filter)
-        )
-
+    print("DEBUG COMPROBANTES ENCONTRADOS:", comprobantes.count()) # <-- ESTO SALDRÁ EN TU TERMINAL DE VS CODE
+    
     context = {
         'comprobantes': comprobantes,
     }
