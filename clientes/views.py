@@ -204,3 +204,66 @@ def configuracion_estudio_view(request):
 
 def cuenta_suspendida_view(request):
     return render(request, 'cuenta_suspendida.html')
+
+import pandas as pd
+from datetime import datetime
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from .models import Comprobante
+
+@login_required
+def cargar_excel_comprobantes(request):
+    if request.method == 'POST' and request.FILES.get('archivo_excel'):
+        file = request.FILES['archivo_excel']
+        
+        try:
+            # Leer las columnas del Excel cargado
+            df = pd.read_excel(file)
+            
+            creados = 0
+            for _, row in df.iterrows():
+                # Leemos los campos (si los nombres de tus columnas cambian, solo ajusta los textos entre comillas)
+                ruc_prop = str(row.get('RUC_Propietario', row.get('RUC', '10442302516'))).strip()
+                tipo_cp = str(row.get('Tipo_Doc', row.get('Tipo', '01'))).zfill(2)
+                serie = str(row.get('Serie', 'F001')).strip()
+                numero = str(row.get('Numero', '1')).strip()
+                
+                # Manejo de la fecha
+                fecha_raw = row.get('Fecha_Emision', row.get('Fecha', datetime.now().date()))
+                try:
+                    fecha_val = pd.to_datetime(fecha_raw).date()
+                except Exception:
+                    fecha_val = datetime.now().date()
+
+                ruc_contra = str(row.get('RUC_Contraparte', row.get('RUC_Proveedor', '20000000000'))).strip()
+                razon_social = str(row.get('Razon_Social', 'CLIENTE FICTICIO S.A.C.')).strip()
+                
+                try:
+                    monto_val = float(str(row.get('Monto_Total', row.get('Monto', 0))).replace(',', ''))
+                except ValueError:
+                    monto_val = 0.0
+
+                # Insertar o actualizar en Neon
+                Comprobante.objects.update_or_create(
+                    ruc_propietario=ruc_prop,
+                    serie=serie,
+                    numero=numero,
+                    defaults={
+                        'tipo_comprobante': tipo_cp,
+                        'fecha_emision': fecha_val,
+                        'ruc_contraparte': ruc_contra,
+                        'razon_social_contraparte': razon_social,
+                        'monto_total': monto_val,
+                        'origen': 'EXCEL'
+                    }
+                )
+                creados += 1
+
+            messages.success(request, f"¡Se cargaron {creados} comprobantes exitosamente!")
+            return redirect('comprobantes')
+
+        except Exception as e:
+            messages.error(request, f"Error al procesar el archivo Excel: {str(e)}")
+
+    return render(request, 'clientes/cargar_excel.html')

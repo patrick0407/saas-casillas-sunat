@@ -12,7 +12,7 @@ urlpatterns = [
     # Autenticación
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
-    
+    path('cargar-excel/', views.cargar_excel_comprobantes, name='cargar_excel'),
     # Dashboard y RUCs
     path('', views.dashboard_view, name='dashboard'),
     path('rucs/', views.lista_rucs_view, name='lista_rucs'),
